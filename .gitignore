@@ -13,7 +13,8 @@ env/
 venv/
 .venv/
 
-# Playwright & Browser user profile data
+# Playwright & Chrome browser profiles
+chrome_dev_profile/
 naver_user_profile/
 .playwright/
 test_user_profile/
