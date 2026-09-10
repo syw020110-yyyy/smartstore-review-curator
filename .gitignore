@@ -1,0 +1,33 @@
+﻿# Environment variables and API keys
+.env
+*.env
+*.env.*
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Playwright & Browser user profile data
+naver_user_profile/
+.playwright/
+test_user_profile/
+
+# Streamlit local config
+.streamlit/secrets.toml
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Output logs and temporary files
+*.log
+scratch/
