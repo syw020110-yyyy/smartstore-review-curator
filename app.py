@@ -19,6 +19,7 @@ from scraper import (
 from analyzer import (
     analyze_reviews_with_gemini,
     get_mock_analysis_result,
+    get_supported_models,
     ReviewAnalysisResult,
 )
 from sample_data import get_sample_dataframe
@@ -253,16 +254,12 @@ with st.sidebar:
     if api_key_input:
         st.session_state.gemini_api_key = api_key_input
 
+    available_models = get_supported_models(st.session_state.gemini_api_key)
     model_choice = st.selectbox(
         "Gemini 모델",
-        [
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-3.6-flash",
-            "gemini-1.5-pro",
-        ],
+        available_models,
         index=0,
-        help="gemini-1.5-flash: 대용량 트래픽에도 안정적이고 빠른 추천 모델\ngemini-2.0-flash: 최신 고속 모델\ngemini-3.6-flash: 실험적 최신 모델 (일시적 서버 혼잡 가능)\ngemini-1.5-pro: 심층적인 복합 추론",
+        help="사용 중인 Gemini API 키에서 지원하는 실제 활성 모델 목록입니다.",
     )
 
     if st.session_state.gemini_api_key:

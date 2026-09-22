@@ -164,11 +164,32 @@ def analyze_reviews_with_gemini(
             term in err_msg.lower() for term in ["unavailable", "high demand", "not found", "no longer available", "resource_exhausted"]
         )
         if is_recoverable:
-            fallback_candidates = [m for m in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"] if m != model_name]
+            # Query live models from user's account if possible
+            live_candidates = []
+            try:
+                for m in client.models.list():
+                    m_id = m.name.replace("models/", "")
+                    actions = getattr(m, "supported_actions", []) or []
+                    if "generateContent" in actions:
+                        live_candidates.append(m_id)
+            except Exception as list_err:
+                logger.debug(f"모델 목록 조회 실패: {list_err}")
+
+            if not live_candidates:
+                live_candidates = [
+                    "gemini-3.5-flash",
+                    "gemini-3.5-flash-lite",
+                    "gemini-3.7-flash",
+                    "gemini-3.8-flash",
+                    "gemini-3.6-flash",
+                    "gemini-2.5-flash",
+                ]
+
+            fallback_candidates = [m for m in live_candidates if m != model_name]
             fallback_success = False
             last_err = e
             for fb_model in fallback_candidates:
-                logger.warning(f"모델 '{model_name}' 호출 지연/불가 ({err_msg[:120]}). 안정적인 대체 모델 '{fb_model}'로 자동 전환 시도...")
+                logger.warning(f"모델 '{model_name}' 호출 지연/불가 ({err_msg[:120]}). 활성 대체 모델 '{fb_model}'로 자동 전환 시도...")
                 try:
                     response = call_gemini(fb_model, max_retries=2)
                     fallback_success = True
@@ -248,6 +269,42 @@ def get_mock_analysis_result(reviews_data: Optional[Any] = None) -> ReviewAnalys
             "3. 꽝꽝 얼어 도착하는 3중 안심 보냉 포장 언박싱 실물 사진/GIF를 배치하여 여름철 신선도 불안 심리를 사전에 해소하세요."
         ]
     )
+
+
+def get_supported_models(api_key: Optional[str] = None) -> List[str]:
+    """
+    Returns the list of valid models supporting generateContent for the given API key.
+    If the API call fails or key is empty, returns recommended active Gemini 3.x models.
+    """
+    resolved_api_key = api_key or os.environ.get("GEMINI_API_KEY")
+    if resolved_api_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=resolved_api_key)
+            models = []
+            for m in client.models.list():
+                m_id = m.name.replace("models/", "")
+                actions = getattr(m, "supported_actions", []) or []
+                if "generateContent" in actions:
+                    models.append(m_id)
+            if models:
+                # Prioritize flash models then others
+                flash = [m for m in models if "flash" in m and "lite" not in m]
+                flash_lite = [m for m in models if "flash-lite" in m or "lite" in m]
+                pro = [m for m in models if "pro" in m]
+                other = [m for m in models if m not in flash and m not in flash_lite and m not in pro]
+                return flash + flash_lite + pro + other
+        except Exception as e:
+            logger.warning(f"Could not list models dynamically: {e}")
+
+    # Fallback to current Gemini 3.x generation
+    return [
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.8-flash",
+    ]
 
 
 if __name__ == "__main__":
