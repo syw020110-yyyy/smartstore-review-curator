@@ -254,7 +254,11 @@ with st.sidebar:
     if api_key_input:
         st.session_state.gemini_api_key = api_key_input
 
-    available_models = get_supported_models(st.session_state.gemini_api_key)
+    @st.cache_data(ttl=1800, show_spinner=False)
+    def _fetch_models(k: str):
+        return get_supported_models(k)
+
+    available_models = _fetch_models(st.session_state.gemini_api_key)
     model_choice = st.selectbox(
         "Gemini 모델",
         available_models,

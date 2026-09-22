@@ -91,9 +91,10 @@ def analyze_reviews_with_gemini(
     if not review_texts:
         raise ValueError("분석할 리뷰 데이터가 비어 있습니다.")
 
-    # Format reviews for prompt
+    # Format reviews for prompt (select top 30 most informative reviews to guarantee ultra-fast response)
+    sorted_reviews = sorted(review_texts, key=lambda x: len(str(x)), reverse=True)[:30]
     formatted_reviews = "\n\n".join(
-        [f"[리뷰 {i+1}]: {text.strip()}" for i, text in enumerate(review_texts[:100])]
+        [f"[리뷰 {i+1}]: {text.strip()}" for i, text in enumerate(sorted_reviews)]
     )
 
     prompt = f"""
@@ -123,7 +124,7 @@ def analyze_reviews_with_gemini(
 {formatted_reviews}
 """
 
-    logger.info(f"Gemini API 호출 중 (모델: {model_name}, 리뷰 건수: {len(review_texts)}건)...")
+    logger.info(f"Gemini API 초고속 호출 중 (모델: {model_name}, 선별 분석 리뷰: {len(sorted_reviews)}건)...")
 
     client = genai.Client(api_key=resolved_api_key)
     
@@ -132,7 +133,13 @@ def analyze_reviews_with_gemini(
     def call_gemini(target_model: str, max_retries: int = 2):
         last_error = None
         for attempt in range(max_retries):
+            # Attempt with minimal/zero thinking budget for instant output
             try:
+                try:
+                    tc = types.ThinkingConfig(thinking_budget=0, thinking_level="minimal")
+                except:
+                    tc = types.ThinkingConfig(thinking_budget=0)
+
                 res = client.models.generate_content(
                     model=target_model,
                     contents=prompt,
@@ -140,16 +147,33 @@ def analyze_reviews_with_gemini(
                         response_mime_type="application/json",
                         response_schema=ReviewAnalysisResult,
                         temperature=0.2,
+                        thinking_config=tc,
                     )
                 )
                 return res
             except Exception as call_err:
-                last_error = call_err
                 err_str = str(call_err)
-                # If temporary spike (503 / 429), wait and retry once
+                # If model rejects thinking_config, retry without thinking_config immediately
+                if "thinking" in err_str.lower() or "not supported" in err_str.lower():
+                    try:
+                        return client.models.generate_content(
+                            model=target_model,
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                response_schema=ReviewAnalysisResult,
+                                temperature=0.2,
+                            )
+                        )
+                    except Exception as err2:
+                        call_err = err2
+                        err_str = str(err2)
+
+                last_error = call_err
+                # If temporary spike (503 / 429), wait 1s and retry once
                 if ("503" in err_str or "429" in err_str or "unavailable" in err_str.lower() or "high demand" in err_str.lower()) and attempt < max_retries - 1:
-                    logger.warning(f"[{target_model}] 일시적 트래픽 집중(503/429) 감지. 2초 후 재시도 ({attempt+1}/{max_retries})...")
-                    time.sleep(2)
+                    logger.warning(f"[{target_model}] 일시적 트래픽 집중(503/429) 감지. 1초 후 재시도 ({attempt+1}/{max_retries})...")
+                    time.sleep(1)
                     continue
                 break
         raise last_error
