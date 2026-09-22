@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LOCAL PROTECTOR - 서촌·북촌 골목 실시간 혼잡도 & 로컬 가이드</title>
+  <meta name="description" content="서촌과 안국·북촌 일대의 실시간 골목 혼잡도를 확인하고, 고즈넉한 로컬 여유 공간을 탐색하세요.">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  
+  <!-- Leaflet & MapLibre GL CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
+  
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=20260922_05">
+  <script>
+    if (window.location.protocol === 'file:') {
+      window.addEventListener('DOMContentLoaded', function() {
+        const warnBox = document.createElement('div');
+        warnBox.id = 'fileProtocolNotice';
+        warnBox.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(8px);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+        warnBox.innerHTML = `
+          <div style="background:#1E293B;border:1px solid #334155;border-radius:18px;max-width:520px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.6);color:#F8FAFC;">
+            <div style="font-size:44px;margin-bottom:12px;">🗺️🚀</div>
+            <h2 style="font-size:19px;font-weight:800;margin-bottom:10px;color:#F8FAFC;">로컬 전용 웹 서버 구동 안내</h2>
+            <p style="font-size:14px;color:#94A3B8;line-height:1.6;margin-bottom:22px;word-break:keep-all;">
+              현재 <code>file://</code> 파일 직접 열기 방식으로 실행되어 브라우저 보안(CORS)으로 인해 지도 모듈이 차단될 수 있습니다.<br><br>
+              폴더 내 <strong style="color:#38BDF8;">[사이트_실행하기.bat]</strong>을 더블클릭하시면 웹서버가 자동 실행되고 정규 주소로 즉시 열립니다!
+            </p>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+              <a href="http://localhost:8000" style="background:#2563EB;color:#fff;padding:12px 20px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px rgba(37,99,235,0.4);transition:0.2s;">
+                http://localhost:8000 바로가기 ➔
+              </a>
+              <button onclick="document.getElementById('fileProtocolNotice').remove()" style="background:#334155;color:#E2E8F0;border:none;padding:12px 18px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;">
+                계속 진행해보기
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(warnBox);
+      });
+    }
+  </script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Splash Intro Screen (모바일 첫 진입 인트로 화면) -->
+    <div class="splash-screen" id="splashScreen">
+      <div class="splash-content">
+        <div class="splash-icon-squircle">
+          <div class="splash-emoji-stack">
+            <span class="emoji-map">🗺️</span>
+            <span class="emoji-detective">🕵️</span>
+          </div>
+        </div>
+        <h2 class="splash-brand-title">LOCAL PROTECTOR</h2>
+        <div class="splash-version-pill">📍 서촌 · 북촌 ver.</div>
+        
+        <div class="splash-loading-wrap">
+          <span class="splash-pulse-dot"></span>
+          <span class="splash-loading-text">골목길을 탐색하는 중...</span>
+        </div>
+      </div>
+      <div class="splash-skip-guide">화면을 탭하여 바로 시작하기</div>
+    </div>
+
+    <!-- Top Header & Controls -->
+    <header class="top-header-wrapper">
+      <div class="brand-row">
+        <a href="#" class="brand-logo" id="brandLogo">
+          <span class="brand-icon">🗺️🕵️</span>
+          <h1 class="brand-title">LOCAL PROTECTOR</h1>
+        </a>
+
+        <!-- 서촌 · 북촌 버전 표시 뱃지 -->
+        <div class="header-version-pill">📍 서촌 · 북촌 ver.</div>
+      </div>
+
+      <!-- 공공 실시간 인구 및 날씨 라이브 바 -->
+      <div class="live-status-bar">
+        <div id="regionCrowdBadge" class="clickable-crowd-badge" title="서울시 실시간 공공데이터 상세 보기">
+          <span class="live-dot"></span>
+          <span>서울시 실시간 도시데이터 연동 중...</span>
+        </div>
+        <div id="regionWeatherBadge">🌤️ 맑음 22℃</div>
+      </div>
+
+      <!-- 목적별 카테고리 필터 바 -->
+      <div class="category-bar" id="categoryBar">
+        <!-- JS 렌더링: 전체, 한옥카페, 독립서점, 전시, 쉼터 등 -->
+      </div>
+    </header>
+
+    <!-- 인터랙티브 혼잡도 지도 -->
+    <main id="map"></main>
+
+    <!-- 지도 좌측 하단 현위치(GPS) 탐색 버튼 -->
+    <button class="map-gps-btn" id="mapGpsBtn" title="내 현재 위치 찾기 (GPS)" aria-label="내 현재 위치 찾기">
+      <svg class="gps-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="7"></circle>
+        <line x1="12" y1="1" x2="12" y2="5"></line>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="1" y1="12" x2="5" y2="12"></line>
+        <line x1="19" y1="12" x2="23" y2="12"></line>
+        <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
+      </svg>
+      <span class="gps-btn-text">내 위치</span>
+    </button>
+
+    <!-- 지도 우측 하단 현장 장소 제보 플로팅 버튼 -->
+    <button class="map-report-btn" id="mapReportBtn" title="내 주변 숨은 장소 제보하기" aria-label="내 주변 숨은 장소 제보">
+      <span class="report-btn-icon">➕</span>
+      <span class="report-btn-text">장소 제보</span>
+    </button>
+
+    <!-- 만석 감지 & 1-Click 대체 공간 추천 배너 -->
+    <section class="alternative-banner-wrapper" id="alternativeBannerContainer" aria-live="polite">
+      <!-- 혼잡 스팟 클릭 시 JS 렌더링 -->
+    </section>
+
+    <!-- 바텀 시트 (바로 입장 가능한 여유 공간 피드) -->
+    <aside class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-handle-bar" id="sheetHandle">
+        <div class="sheet-handle"></div>
+      </div>
+
+      <div class="sheet-header">
+        <div class="sheet-title-row">
+          <h2 class="sheet-title">✨ 지금 바로 입장 가능한 공간</h2>
+          <span class="sheet-count-badge" id="availableSpotsCount">0곳</span>
+        </div>
+
+        <div class="sheet-controls-row">
+          <label class="smooth-filter-label">
+            <input type="checkbox" id="toggleSmoothOnly" />
+            <span>🟢 여유 공간만 보기</span>
+          </label>
+
+          <div class="live-realtime-badge">
+            <span class="live-dot"></span>
+            <span id="liveClockBadge">실시간 LIVE 기준</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 추천 스팟 목록 -->
+      <div class="spot-list-container" id="spotListContainer">
+        <!-- JS 렌더링: 스팟 카드 리스트 -->
+      </div>
+    </aside>
+
+    <!-- 공간 상세 정보 & 대체지 모달 -->
+    <div class="modal-container" id="spotModalContainer">
+      <!-- JS 렌더링: 모달 다이얼로그 -->
+    </div>
+
+    <!-- 서울시 실시간 공공데이터 테스트 대시보드 모달 -->
+    <div class="modal-container" id="publicDataModalContainer">
+      <!-- JS 렌더링: 공공데이터 대시보드 모달 -->
+    </div>
+
+    <!-- 현장 장소 제보 팝업 모달 -->
+    <div class="modal-container" id="reportModalContainer">
+      <!-- JS 렌더링: 장소 제보 모달 -->
+    </div>
+
+    <!-- 최근 일주일 NEW UPDATE 장소 모달 -->
+    <div class="modal-container" id="newUpdateModalContainer">
+      <!-- JS 렌더링: 신규 업데이트 장소 모달 -->
+    </div>
+
+    <!-- 토스트 알림 -->
+    <div id="toastNotification" class="toast-notification"></div>
+
+  </div>
+
+  <!-- Leaflet & MapLibre GL JS (Watermark-Free Positron Vector Basemap) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.21/leaflet-maplibre-gl.js"></script>
+  
+  <!-- Application Entry -->
+  <script type="module" src="js/app.js?v=20260922_05"></script>
+</body>
+</html>

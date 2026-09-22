@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서울시 실시간 도시데이터 API 테스트 대시보드 - LOCAL PROTECTOR</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-sub: #475569;
+      --text-muted: #94A3B8;
+      --border: #E2E8F0;
+      --primary: #2563EB;
+      --primary-light: #EFF6FF;
+      --smooth: #10B981;
+      --smooth-bg: #ECFDF5;
+      --moderate: #F59E0B;
+      --moderate-bg: #FFFBEB;
+      --slightly-crowded: #F97316;
+      --slightly-crowded-bg: #FFF7ED;
+      --crowded: #EF4444;
+      --crowded-bg: #FEF2F2;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 6px 18px rgba(15,23,42,0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      padding: 24px 16px 48px;
+      line-height: 1.5;
+    }
+
+    .dashboard-container {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    .dashboard-header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      font-size: 26px;
+    }
+
+    .title-wrap h1 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .title-wrap p {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .nav-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-light);
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      transition: all 0.2s;
+    }
+
+    .nav-back-link:hover {
+      background: var(--primary);
+      color: #FFFFFF;
+    }
+
+    /* Controls: Tabs & Refresh */
+    .control-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .control-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .area-tabs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .tab-btn {
+      border: 1.5px solid var(--border);
+      background: #FFFFFF;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: #F1F5F9;
+      color: var(--text-main);
+      border-color: #CBD5E1;
+    }
+
+    .tab-btn.active {
+      background: var(--text-main);
+      color: #FFFFFF;
+      border-color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #F1F5F9;
+      padding-top: 12px;
+    }
+
+    .api-info-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .btn-refresh {
+      background: var(--primary);
+      color: #FFFFFF;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+      transition: all 0.2s;
+    }
+
+    .btn-refresh:hover {
+      background: #1D4ED8;
+      transform: translateY(-1px);
+    }
+
+    .btn-refresh.loading .spin-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Result Card */
+    .result-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 16px;
+    }
+
+    .area-name-wrap h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .area-name-wrap .area-code {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .congest-badge {
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+
+    .congest-badge.level-smooth {
+      background: var(--smooth-bg);
+      color: var(--smooth);
+      border-color: #A7F3D0;
+    }
+
+    .congest-badge.level-moderate {
+      background: var(--moderate-bg);
+      color: var(--moderate);
+      border-color: #FDE68A;
+    }
+
+    .congest-badge.level-slightly-crowded {
+      background: var(--slightly-crowded-bg);
+      color: var(--slightly-crowded);
+      border-color: #FED7AA;
+    }
+
+    .congest-badge.level-crowded {
+      background: var(--crowded-bg);
+      color: var(--crowded);
+      border-color: #FECACA;
+    }
+
+    /* Congestion Message Box */
+    .msg-banner {
+      background: #F8FAFC;
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .stat-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* Demographic Bars */
+    .demographics-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .demo-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .gender-bar-wrap {
+      display: flex;
+      height: 14px;
+      border-radius: 7px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .gender-male {
+      background: #3B82F6;
+      transition: width 0.4s;
+    }
+
+    .gender-female {
+      background: #EC4899;
+      transition: width 0.4s;
+    }
+
+    .gender-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    /* Raw JSON Toggle */
+    .raw-json-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .raw-json-header {
+      padding: 14px 20px;
+      background: #F1F5F9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .raw-json-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .raw-json-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-copy-json {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .raw-json-body {
+      display: none;
+      padding: 16px;
+      background: #0F172A;
+      color: #E2E8F0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .raw-json-body.open {
+      display: block;
+    }
+
+    /* Loading / Error States */
+    .loading-state, .error-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-sub);
+    }
+
+    .error-state {
+      color: var(--crowded);
+      background: var(--crowded-bg);
+      border-radius: 10px;
+      border: 1px solid #FECACA;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="brand-group">
+        <span class="brand-icon">🦋</span>
+        <div class="title-wrap">
+          <h1>서울시 실시간 도시데이터 LIVE 대시보드</h1>
+          <p>서울 열린데이터광장(OpenAPI) 인구 혼잡도 실시간 검증 뷰어</p>
+        </div>
+      </div>
+      <a href="index.html" class="nav-back-link">
+        <span>🗺️ 나비 지도 앱으로 이동</span>
+      </a>
+    </header>
+
+    <!-- Controls: Tabs & Refresh -->
+    <section class="control-card">
+      <div class="control-title">
+        <span>📍 실시간 모니터링 대상 구역 선택</span>
+        <span class="api-info-badge">API Key: 6a70...646f</span>
+      </div>
+
+      <div class="area-tabs-grid" id="areaTabsContainer">
+        <button class="tab-btn active" data-area="경복궁" data-label="서촌 (경복궁)">🏯 경복궁·서촌</button>
+        <button class="tab-btn" data-area="북촌한옥마을" data-label="안국 (북촌한옥마을)">🏘️ 안국·북촌</button>
+        <button class="tab-btn" data-area="익선동" data-label="익선동">☕ 익선동</button>
+        <button class="tab-btn" data-area="광화문·덕수궁" data-label="광화문·덕수궁">🏛️ 광화문</button>
+      </div>
+
+      <div class="actions-row">
+        <span id="lastUpdatedLabel" style="font-size: 12px; color: var(--text-muted);">
+          마지막 호출: 대기 중
+        </span>
+        <button class="btn-refresh" id="btnRefresh">
+          <span class="spin-icon">🔄</span>
+          <span>실시간 데이터 새로고침</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Result View Container -->
+    <main id="resultViewContainer">
+      <!-- JS 렌더링 -->
+    </main>
+
+    <!-- Raw JSON Toggle Section -->
+    <section class="raw-json-section">
+      <div class="raw-json-header" id="rawJsonToggle">
+        <span class="raw-json-title">
+          <span>🔍 디버깅용 Raw JSON 데이터</span>
+          <span id="jsonToggleArrow">▾</span>
+        </span>
+        <div class="raw-json-actions">
+          <button class="btn-copy-json" id="btnCopyJson">📋 복사</button>
+        </div>
+      </div>
+      <pre class="raw-json-body" id="rawJsonBody">데이터 로딩 대기 중...</pre>
+    </section>
+
+  </div>
+
+  <script>
+    const API_KEY = '6a706e626f7375683332484b4e6166';
+    let currentArea = '경복궁';
+    let currentLabel = '서촌 (경복궁)';
+    let currentRawData = null;
+
+    // 혼잡도 레벨 메타데이터
+    function getCongestBadgeMeta(level) {
+      switch (level) {
+        case '여유':
+          return { className: 'level-smooth', emoji: '🟢', text: '여유' };
+        case '보통':
+          return { className: 'level-moderate', emoji: '🟡', text: '보통' };
+        case '약간 붐빔':
+          return { className: 'level-slightly-crowded', emoji: '🟠', text: '약간 붐빔' };
+        case '붐빔':
+          return { className: 'level-crowded', emoji: '🔴', text: '붐빔' };
+        default:
+          return { className: 'level-smooth', emoji: '🟢', text: level || '여유' };
+      }
+    }
+
+    async function fetchSeoulCityData(areaName) {
+      const container = document.getElementById('resultViewContainer');
+      const refreshBtn = document.getElementById('btnRefresh');
+      const rawJsonBody = document.getElementById('rawJsonBody');
+      const lastUpdatedLabel = document.getElementById('lastUpdatedLabel');
+
+      refreshBtn.classList.add('loading');
+      container.innerHTML = `
+        <div class="result-card">
+          <div class="loading-state">
+            <p>⏳ <strong>[${currentLabel}]</strong> 서울시 실시간 도시데이터를 불러오는 중입니다...</p>
+          </div>
+        </div>
+      `;
+
+      const targetUrl = `http://openapi.seoul.go.kr:8088/${API_KEY}/json/citydata/1/5/${encodeURIComponent(areaName)}`;
+      
+      let data = null;
+      let usedMethod = '';
+
+      // 1. AllOrigins Proxy 시도
+      try {
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const res = await fetch(proxyUrl);
+        if (res.ok) {
+          const wrapper = await res.json();
+          if (wrapper.contents) {
+            data = JSON.parse(wrapper.contents);
+            usedMethod = 'AllOrigins CORS Proxy';
+          }
+        }
+      } catch (err) {
+        console.warn('Proxy 1 failed, trying fallback proxy...', err);
+      }
+
+      // 2. Corsproxy.io Fallback 시도
+      if (!data) {
+        try {
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+          if (res.ok) {
+            data = await res.json();
+            usedMethod = 'CorsProxy.io';
+          }
+        } catch (err) {
+          console.warn('Proxy 2 failed, trying direct...', err);
+        }
+      }
+
+      // 3. Direct Fetch 시도
+      if (!data) {
+        try {
+          const res = await fetch(targetUrl);
+          if (res.ok) {
+            data = await res.json();
+            usedMethod = 'Direct Fetch';
+          }
+        } catch (err) {
+          console.warn('Direct fetch failed...', err);
+        }
+      }
+
+      refreshBtn.classList.remove('loading');
+
+      if (!data || !data.CITYDATA || !data.CITYDATA.LIVE_PPLTN_STTS) {
+        container.innerHTML = `
+          <div class="error-state">
+            <h3>⚠️ 공공데이터 호출 실패</h3>
+            <p>API 응답을 파싱할 수 없거나 네트워크 제한이 발생했습니다.</p>
+            <p style="font-size: 11px; margin-top: 8px;">URL: ${targetUrl}</p>
+          </div>
+        `;
+        rawJsonBody.textContent = JSON.stringify(data || { error: 'No response' }, null, 2);
+        return;
+      }
+
+      currentRawData = data;
+      rawJsonBody.textContent = JSON.stringify(data, null, 2);
+
+      const stts = Array.isArray(data.CITYDATA.LIVE_PPLTN_STTS)
+        ? data.CITYDATA.LIVE_PPLTN_STTS[0]
+        : data.CITYDATA.LIVE_PPLTN_STTS;
+
+      const badge = getCongestBadgeMeta(stts.AREA_CONGEST_LVL);
+      const minPop = Number(stts.AREA_PPLTN_MIN).toLocaleString();
+      const maxPop = Number(stts.AREA_PPLTN_MAX).toLocaleString();
+      const maleRate = parseFloat(stts.MALE_PPLTN_RATE || 50);
+      const femaleRate = parseFloat(stts.FEMALE_PPLTN_RATE || 50);
+
+      const now = new Date();
+      lastUpdatedLabel.textContent = `마지막 호출: ${now.toLocaleTimeString()} (${usedMethod})`;
+
+      container.innerHTML = `
+        <div class="result-card">
+          
+          <!-- Header Row -->
+          <div class="result-header">
+            <div class="area-name-wrap">
+              <h2>${stts.AREA_NM || currentLabel} <span class="area-code">(${stts.AREA_CD || 'AREA'})</span></h2>
+              <span style="font-size: 12px; color: var(--text-muted);">기준 시각: <strong>${stts.PPLTN_TIME}</strong></span>
+            </div>
+            <div class="congest-badge ${badge.className}">
+              <span>${badge.emoji}</span>
+              <span>${stts.AREA_CONGEST_LVL}</span>
+            </div>
+          </div>
+
+          <!-- Congestion Detail Message -->
+          <div class="msg-banner">
+            📢 <strong>실시간 현장 혼잡도 브리핑:</strong><br>
+            ${stts.AREA_CONGEST_MSG || '실시간 상세 안내 정보가 제공되지 않았습니다.'}
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-label">👥 실시간 유동인구 추정치</span>
+              <span class="stat-value">${minPop} ~ ${maxPop}명</span>
+              <span class="stat-sub">서울시 통신 기반 실시간 인구</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">🕒 데이터 갱신 주기</span>
+              <span class="stat-value">5~10분 실시간</span>
+              <span class="stat-sub">최신 데이터: ${stts.PPLTN_TIME.split(' ')[1] || '최근'}</span>
+            </div>
+          </div>
+
+          <!-- Gender Demographic Breakdown -->
+          <div class="demographics-box">
+            <div class="demo-title">📊 성별 유동인구 분포</div>
+            <div class="gender-bar-wrap">
+              <div class="gender-male" style="width: ${maleRate}%;"></div>
+              <div class="gender-female" style="width: ${femaleRate}%;"></div>
+            </div>
+            <div class="gender-labels">
+              <span>남성: <strong>${maleRate}%</strong></span>
+              <span>여성: <strong>${femaleRate}%</strong></span>
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+    // Tabs Click Event
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentArea = btn.dataset.area;
+        currentLabel = btn.dataset.label;
+        fetchSeoulCityData(currentArea);
+      });
+    });
+
+    // Refresh Button Event
+    document.getElementById('btnRefresh').addEventListener('click', () => {
+      fetchSeoulCityData(currentArea);
+    });
+
+    // Toggle Raw JSON
+    const rawToggle = document.getElementById('rawJsonToggle');
+    const rawBody = document.getElementById('rawJsonBody');
+    const arrow = document.getElementById('jsonToggleArrow');
+    rawToggle.addEventListener('click', () => {
+      const isOpen = rawBody.classList.toggle('open');
+      arrow.textContent = isOpen ? '▴' : '▾';
+    });
+
+    // Copy JSON
+    document.getElementById('btnCopyJson').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!currentRawData) return;
+      navigator.clipboard.writeText(JSON.stringify(currentRawData, null, 2)).then(() => {
+        alert('📋 Raw JSON 데이터가 클립보드에 복사되었습니다.');
+      });
+    });
+
+    // Initial Load
+    fetchSeoulCityData(currentArea);
+  </script>
+</body>
+</html>
