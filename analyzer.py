@@ -127,36 +127,52 @@ def analyze_reviews_with_gemini(
 
     client = genai.Client(api_key=resolved_api_key)
     
+    import time
+
+    def call_gemini(target_model: str, max_retries: int = 2):
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                res = client.models.generate_content(
+                    model=target_model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=ReviewAnalysisResult,
+                        temperature=0.2,
+                    )
+                )
+                return res
+            except Exception as call_err:
+                last_error = call_err
+                err_str = str(call_err)
+                # If temporary spike (503 / 429), wait and retry once
+                if ("503" in err_str or "429" in err_str or "unavailable" in err_str.lower() or "high demand" in err_str.lower()) and attempt < max_retries - 1:
+                    logger.warning(f"[{target_model}] 일시적 트래픽 집중(503/429) 감지. 2초 후 재시도 ({attempt+1}/{max_retries})...")
+                    time.sleep(2)
+                    continue
+                break
+        raise last_error
+
+    response = None
     try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=ReviewAnalysisResult,
-                temperature=0.2,
-            )
-        )
+        response = call_gemini(model_name)
     except Exception as e:
         err_msg = str(e)
-        # If model is not found or deprecated, try automatic fallback
-        if "404" in err_msg or "not found" in err_msg.lower() or "no longer available" in err_msg.lower():
+        # Check if error is 503 (high demand), 429 (rate limit), or 404 (not found)
+        is_recoverable = any(code in err_msg for code in ["503", "429", "404"]) or any(
+            term in err_msg.lower() for term in ["unavailable", "high demand", "not found", "no longer available", "resource_exhausted"]
+        )
+        if is_recoverable:
             fallback_candidates = [m for m in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"] if m != model_name]
             fallback_success = False
             last_err = e
             for fb_model in fallback_candidates:
-                logger.warning(f"모델 '{model_name}' 호출 불가 ({err_msg}). 대체 모델 '{fb_model}'로 재시도합니다...")
+                logger.warning(f"모델 '{model_name}' 호출 지연/불가 ({err_msg[:120]}). 안정적인 대체 모델 '{fb_model}'로 자동 전환 시도...")
                 try:
-                    response = client.models.generate_content(
-                        model=fb_model,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema=ReviewAnalysisResult,
-                            temperature=0.2,
-                        )
-                    )
+                    response = call_gemini(fb_model, max_retries=2)
                     fallback_success = True
+                    logger.info(f"대체 모델 '{fb_model}'로 분석 완료!")
                     break
                 except Exception as fb_err:
                     last_err = fb_err

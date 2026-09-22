@@ -256,14 +256,13 @@ with st.sidebar:
     model_choice = st.selectbox(
         "Gemini 모델",
         [
-            "gemini-3.6-flash",
             "gemini-1.5-flash",
-            "gemini-1.5-pro",
             "gemini-2.0-flash",
-            "gemini-2.5-flash",
+            "gemini-3.6-flash",
+            "gemini-1.5-pro",
         ],
         index=0,
-        help="gemini-3.6-flash: 최신 고속 모델 (권장)\ngemini-1.5-flash: 널리 지원되는 고속 안정 모델\ngemini-1.5-pro: 심층적인 복합 추론",
+        help="gemini-1.5-flash: 대용량 트래픽에도 안정적이고 빠른 추천 모델\ngemini-2.0-flash: 최신 고속 모델\ngemini-3.6-flash: 실험적 최신 모델 (일시적 서버 혼잡 가능)\ngemini-1.5-pro: 심층적인 복합 추론",
     )
 
     if st.session_state.gemini_api_key:
